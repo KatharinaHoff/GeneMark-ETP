@@ -1051,7 +1051,15 @@ sub AssembleTrans
 			print "# working on $set\n" if $verbose;
 			if ( CreateThis($out_gff) )
 			{
-				system("stringtie -p $cores -o $out_gff $in_bam");
+			    # This is the original short read assembly command of current GeneMark-ETP
+			    # system("stringtie -p $cores -o $out_gff $in_bam");
+			    # Katharina replaces that default command with the following for isoseq assembly from BAM
+			    # Warning: this means that this particular developmental version of GeneMark-ETP is
+			    #          fragile. It will only process isoseq reads correctly if BRAKER as a
+			    #          wrapper is called with a BAM file from isoseq read mappings, it will
+			    #          not process any short read data, properly, anymore.
+			    # Warning: accuracy has not been measured, this might work poorly in practice.
+			    system("stringtie -L -p $cores -o $out_gff $in_bam");
 			}
 			else
 			{
