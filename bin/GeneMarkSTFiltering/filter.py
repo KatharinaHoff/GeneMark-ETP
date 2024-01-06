@@ -435,6 +435,13 @@ def runDiamond(genome, gmst, diamondDB, maxTargets):
     systemCall(f'{binDir}/proteins_from_gtf.pl --seq {genome} --annot {gmst} \
                --out {query}')
 
+    # Check if query file or diamondDB file is empty
+    if os.path.getsize(query) == 0 or os.path.getsize(diamondDB) == 0:
+        logging.warning('Either the query file or the diamondDB file is empty. Generating empty output.')
+        with open(output, 'w') as f:
+            pass  # This creates an empty file
+        return loadDiamondResult(output)
+
     logging.info(f'Running DIAMOND with the query: {query}')
     systemCall(f'{diamondDir}diamond blastp --query {query} --db {diamondDB} \
                --outfmt 6 qseqid sseqid pident length positive mismatch \
