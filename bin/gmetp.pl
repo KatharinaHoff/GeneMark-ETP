@@ -1051,7 +1051,7 @@ sub AssembleTrans
 			print "# working on $set\n" if $verbose;
 			if ( CreateThis($out_gff) )
 			{
-			    system("stringtie -p $cores -o $out_gff $in_bam");
+			    system("stringtie --mix -p $cores -o $out_gff $in_bam /data/braker_Isoseq_bam/isoseq.bam");
 			}
 			else
 			{
