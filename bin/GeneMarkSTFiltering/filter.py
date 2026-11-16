@@ -394,9 +394,10 @@ def selectSubsetRawGmst(gmst, subset):
 
 
 def gmst2Hints(gmst, tseq, ggtf, complete=False, lorf=False, extend=False,
-               subset=set()):
+               subset=None):
 
-    if len(subset) != 0:
+    # An empty subset selects nothing; only subset=None means all predictions
+    if subset is not None:
         gmst = selectSubsetRawGmst(gmst, subset)
 
     gtfOut = temp("gmst", ".gtf").name
@@ -732,14 +733,25 @@ def main():
     #unsupported = unsupported.filterByLogOdds(args)
 
     protHintOutFolder = outputFolder + "/prothint_unsupported"
-    runProtHint(protHintOutFolder, unsupported, args)
-    logging.info("Removing ProtHint-conflicting prediction in the" +
-                 " unsupported gene set.")
-    removeConflictingPredictions.remove(protHintOutFolder + "/seeds.gtf",
-                                        protHintOutFolder + "/Spaln/spaln.gff",
-                                        100,
-                                        protHintOutFolder + "/no_confl.gtf")
-    unsupNoConflicts = Predictions(protHintOutFolder + "/no_confl.gtf")
+    if unsupported.getIDs():
+        runProtHint(protHintOutFolder, unsupported, args)
+        logging.info("Removing ProtHint-conflicting prediction in the" +
+                     " unsupported gene set.")
+        removeConflictingPredictions.remove(protHintOutFolder + "/seeds.gtf",
+                                            protHintOutFolder +
+                                            "/Spaln/spaln.gff",
+                                            100,
+                                            protHintOutFolder + "/no_confl.gtf")
+        unsupNoConflicts = Predictions(protHintOutFolder + "/no_confl.gtf")
+    else:
+        # ProtHint fails on an empty seed file. With no unsupported
+        # candidates there is nothing to check, continue with an empty set.
+        logging.info("No reliable genes without full protein support " +
+                     "found. Skipping ProtHint on the unsupported gene set.")
+        emptyGtf = temp("gtfFile", ".gtf")
+        emptyGtf.close()
+        unsupNoConflicts = Predictions()
+        unsupNoConflicts.setPredictions({}, emptyGtf.name)
     unsupNoConflicts.print(outputFolder + "/unsupported_noConfl.gtf")
     unsupNoConflicts = unsupNoConflicts.filterByLogOdds(args)
     unsupNoConflicts.print(outputFolder + "/unsupported_noConfl_logodds.gtf")
@@ -793,7 +805,7 @@ def main():
 
     logging.info("Deleting temporary files.")
     cleanup()
-    if not args.printIntermediate:
+    if not args.printIntermediate and os.path.isdir(protHintOutFolder):
         shutil.rmtree(protHintOutFolder)
     logging.info("GMST filtering and classification finished.")
 

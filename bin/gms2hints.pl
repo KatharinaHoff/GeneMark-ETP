@@ -145,7 +145,7 @@ sub UpdateRecords
 {
 	print "### UpdateRecords update CDS related information after moving start codon\n" if $verbose;
 
-	foreach my $tid ( keys %data )
+	foreach my $tid ( sort keys %data )
 	{
 		my $ref = $data{$tid};
 
@@ -257,7 +257,7 @@ sub FilterOutRepeats
 
 	my $count_masked = 0; 
 
-	foreach my $tid ( keys %data )
+	foreach my $tid ( sort keys %data )
 	{
 		next if ! $data{$tid}{'has_cds'};
 		next if ( $nodup and !$data{$tid}{'is_nodup'} );
@@ -280,6 +280,30 @@ sub FilterOutRepeats
 	print "### FilterOutRepeats filter out CDS covered by repeats ... done\n" if $verbose;
 }
 # ----------------------------
+# TRUE if transcript $t is preferred over transcript $u.
+# Compare by $key (higher wins), then CDS logodd score, then StringTie
+# coverage (higher wins), then transcript id (lexically smaller wins).
+# The explicit tie-break makes the selection independent of hash order.
+sub IsBetterIsoform
+{
+	my $t = shift;
+	my $u = shift;
+	my $key = shift;
+
+	my $rt = $data{$t};
+	my $ru = $data{$u};
+
+	foreach my $k ( $key, 'score', 't_cov' )
+	{
+		my $vt = $rt->{$k} // 0;
+		my $vu = $ru->{$k} // 0;
+		return 1 if ( $vt > $vu );
+		return 0 if ( $vt < $vu );
+	}
+
+	return ( $t lt $u ) ? 1 : 0;
+}
+# ----------------------------
 sub ReduceAlternative
 {
 	print "### ReduceAlternative selecting one isoform representative\n" if $verbose;
@@ -291,7 +315,7 @@ sub ReduceAlternative
 	my $length_cov_1_0 = 0;
 	my $length_cov_0_1 = 0;
 
-	foreach my $tid ( keys %data )
+	foreach my $tid ( sort keys %data )
 	{
 		next if ! $data{$tid}{'has_cds'};
 		next if ( $nodup and !$data{$tid}{'is_nodup'} );
@@ -310,7 +334,7 @@ sub ReduceAlternative
 		}
 		else
 		{
-			if ( $data{$tid}{'cds_length'} > $h{$gid}{'cds_length'} )
+			if ( IsBetterIsoform( $tid, $h{$gid}{'tid'}, 'cds_length' ) )
 			{
 				$length_cov_1_0 += 1 if ( $data{$tid}{'t_cov'} < $h{$gid}{'t_cov'} );
 
@@ -361,7 +385,7 @@ sub ReduceCDSduplication
 	my %h = ();
 	my $cds_dup_count = 0;
 
-	foreach my $tid ( keys %data )
+	foreach my $tid ( sort keys %data )
 	{
 		next if ( ! $data{$tid}{'has_cds'} );
 
@@ -382,7 +406,7 @@ sub ReduceCDSduplication
 		}
 		else
 		{
-			if ( $data{$tid}{'t_length'} > $data{ $h{$id}{'best'} }{'t_length'} )
+			if ( IsBetterIsoform( $tid, $h{$id}{'best'}, 't_length' ) )
 			{
 				$data{ $h{$id}{'best'} }{'is_nodup'} = 0;
 				$data{$tid}{'is_nodup'} = 1;
@@ -468,7 +492,7 @@ sub ReportCDS
 	my $ignored_strand_mismatch = 0;
 
 	open( my $OUT, ">", $fname ) or die "error on open file $fname; $!\n";
-	foreach my $tid ( keys %data )
+	foreach my $tid ( sort keys %data )
 	{
 		next if ! $data{$tid}{'has_cds'};
 
@@ -630,7 +654,7 @@ sub ReportTranscriptGFF
 	print "# ReportTranscriptGFF creating output transcript level GFF file.\n" if $verbose;
 
 	open( my $OUT, ">", $fname ) or die "error on open file $fname; $!\n";
-	foreach my $tid ( keys %data )
+	foreach my $tid ( sort keys %data )
 	{
 		my $ref = $data{$tid};
 		
@@ -659,7 +683,7 @@ sub AddCDStypeLabels
 	my $count_no_start = 0;
 	my $count_no_stop = 0;
 
-	foreach my $tid ( keys %data )
+	foreach my $tid ( sort keys %data )
 	{
 		my $ref = $data{$tid};
 
@@ -759,7 +783,7 @@ sub TransferCDStoDNA
 
 	my $count_strand_mismatch = 0;
 
-	foreach my $tid ( keys %data )
+	foreach my $tid ( sort keys %data )
 	{
 		my $ref = $data{$tid};
 
@@ -1031,7 +1055,7 @@ sub SetUtrAndCompleteStatus
 	# This estimation is wrong in some cases
 	# Some of these errors will be corrected later by parsing start/stops from sequence
 
-	foreach my $tid (keys %data)
+	foreach my $tid ( sort keys %data )
 	{
 		my $ref = $data{$tid};
 
@@ -1092,7 +1116,7 @@ sub ReportStatus
 	my $num_no_stop = 0;
 	my $num_no_both = 0;
 
-	foreach my $tid (keys %data)
+	foreach my $tid ( sort keys %data )
 	{
 		my $ref = $data{$tid};
 
@@ -1181,7 +1205,7 @@ sub UpdateCDSinfoFromSequence
 	my $count_up_stop = 0;
 	my $count_up_start = 0;
 
-	foreach my $tid (keys %data)
+	foreach my $tid ( sort keys %data )
 	{
 		my $ref = $data{$tid};
 
@@ -1342,7 +1366,7 @@ sub SetLORFs
 	my $count_is_LORF_rev = 0;
 	my $count_no_LORF = 0;
 
-	foreach my $tid ( keys %data )
+	foreach my $tid ( sort keys %data )
 	{
 		my $ref = $data{$tid};
 
@@ -1439,7 +1463,7 @@ sub MoveStarts
 		return;
 	}
 
-	foreach my $tid ( keys %data )
+	foreach my $tid ( sort keys %data )
 	{
 		my $ref = $data{$tid};
 
@@ -1574,7 +1598,7 @@ sub CheckExonsSortedInTranscripts
 {
 	print "### CheckExonsSortedInTranscripts checking exons in transcripts\n" if $verbose;
 
-	foreach my $tid ( keys %data )
+	foreach my $tid ( sort keys %data )
 	{
 		TranscriptLength($tid);
 
@@ -1606,7 +1630,7 @@ sub CheckAndSetGeneStrand
 
 	# loop over all multi-exon transcripts first
 	# set strand based on the strand of multi exon transcripts
-	foreach my $tid ( keys %data )
+	foreach my $tid ( sort keys %data )
 	{
 		my $ref = $data{$tid};
 
@@ -1635,7 +1659,7 @@ sub CheckAndSetGeneStrand
 	}
 
 	# check strand of single exon transcripts
-	foreach my $tid ( keys %data )
+	foreach my $tid ( sort keys %data )
 	{
 		my $ref = $data{$tid};
 
