@@ -71,7 +71,9 @@ foreach my $gid (sort{$a cmp $b } keys %gid2record)
 	push (@record, @introns);
 
 	print $OUT ("## seq_id: ". $record[0][0] ."\n");
-	print $OUT ("## ". $gcount ."\t". $cds_length ."\t". (scalar @introns) ."\n");
+	# third column is the number of exons (gmhmme3 training format
+	# "## gene_id cds_length exons_in_gene", read by parse_set.pl)
+	print $OUT ("## ". $gcount ."\t". $cds_length ."\t". (scalar @introns + 1) ."\n");
 
 	foreach my $feature (@record)
 	{

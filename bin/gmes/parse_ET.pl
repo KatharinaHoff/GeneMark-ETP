@@ -265,6 +265,14 @@ sub Transition_I_vs_T
 		$p_to_i = $value1;
 	}
 
+	# a transition probability outside (0,1) makes gmhmme3 stop with
+	# "negative argument in LOG function"
+	if ( $p_to_i <= 0 or $p_to_i >= 1 )
+	{
+		print "warning, IvsT estimate out of range: $p_to_i, using 0.001\n";
+		$p_to_i = 0.001;
+	}
+
 	my $p_to_t = 1 - $p_to_i;
 
 	if ($v)
